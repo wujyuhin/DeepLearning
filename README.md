@@ -18,3 +18,5 @@ My deep learning course teached by Prof Le Li
   - 直接作为输入数据进行训练
 
 上述模型可以调整的参数有word2vec的训练参数、分类器的训练参数
+
+# LSTM（coding）
