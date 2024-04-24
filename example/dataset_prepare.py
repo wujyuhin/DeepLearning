@@ -1,5 +1,5 @@
 # 将文件夹中的ChnSentiCorp_htl_all.csv读取后，通过已经训练的word2vec模型进行文本向量化，如下：
-
+import numpy as np
 import pandas as pd
 import jieba
 import re
@@ -26,17 +26,22 @@ model = Word2Vec.load(model_path)
 X = []
 for text in tqdm(data['review']):
     vec = []
-    for word in text.split():
+    for word in text: # 如果是英文，直接text.split()即可，因为英文单词之间是空格分隔，而中文是字之间没有空格
         try:
             vec.append(model.wv[word])  # 词向量化
         except:
             pass  # 词不在词典中,跳过
     if len(vec) == 0:  # 如果句子中的词都不在词典中，则用0向量代替
-        vec = [0] * 100
-    X.append(sum(vec) / len(vec))  # 句子向量化,取平均值
+        vec = np.array([0] * 128)
+        X.append(vec)
+    else:
+        X.append(sum(vec) / len(vec))  # 句子向量化,取平均值
 
 X = pd.DataFrame(X)
 y = data['label']
+# word2XY(data, model)
+
+
 
 # 划分数据集
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
