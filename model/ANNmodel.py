@@ -1,6 +1,18 @@
+<<<<<<< HEAD
 import torch
 import torch.nn as nn
 import pytorch_lightning as pl
+=======
+from typing import Any
+
+import torch
+import torch.nn as nn
+import pytorch_lightning as pl
+from pytorch_lightning.utilities.types import STEP_OUTPUT
+
+# 调用gpu
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+>>>>>>> dad1c1502c4a8901b4ffa4702e0e6a35af4993da
 
 
 class ANNmodel(pl.LightningModule):
@@ -21,11 +33,19 @@ class ANNmodel(pl.LightningModule):
         x = self.softmax(x)
         return x
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> dad1c1502c4a8901b4ffa4702e0e6a35af4993da
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=0.001)
 
     def training_step(self, batch, batch_idx):
         x, y = batch
         y_hat = self(x)
+<<<<<<< HEAD
+=======
+        # print(y_hat.device)
+>>>>>>> dad1c1502c4a8901b4ffa4702e0e6a35af4993da
         loss = self.loss(y_hat, y)
         return loss
