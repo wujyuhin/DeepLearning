@@ -1,0 +1,53 @@
+{
+    "os": "Windows-10-10.0.22621-SP0",
+    "python": "3.9.0",
+    "heartbeatAt": "2024-04-06T07:57:27.030340",
+    "startedAt": "2024-04-06T07:57:25.271566",
+    "docker": null,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "D:\\Attachments\\01-mycourse\\deep learning\\example\\word2vec\\word2vec_classify.py",
+    "codePathLocal": "word2vec_classify.py",
+    "codePath": "example\\word2vec\\word2vec_classify.py",
+    "git": {
+        "remote": "git@github.com:wujyuhin/DeepLearning.git",
+        "commit": "4e36a5f50b2ce5606003f8429cc20015db4086d3"
+    },
+    "email": "wujyuhin@163.com",
+    "root": "D:/Attachments/01-mycourse/deep learning",
+    "host": "admin",
+    "username": "wujyu",
+    "executable": "C:\\Users\\wujyu\\anaconda3\\envs\\torch-huyq\\python.exe",
+    "cpu_count": 12,
+    "cpu_count_logical": 20,
+    "cpu_freq": {
+        "current": 3600.0,
+        "min": 0.0,
+        "max": 3600.0
+    },
+    "cpu_freq_per_core": [
+        {
+            "current": 3600.0,
+            "min": 0.0,
+            "max": 3600.0
+        }
+    ],
+    "disk": {
+        "/": {
+            "total": 3726.0205039978027,
+            "used": 74.16496276855469
+        }
+    },
+    "gpu": "NVIDIA GeForce RTX 3080 Ti",
+    "gpu_count": 1,
+    "gpu_devices": [
+        {
+            "name": "NVIDIA GeForce RTX 3080 Ti",
+            "memory_total": 12884901888
+        }
+    ],
+    "memory": {
+        "total": 63.77534484863281
+    }
+}
