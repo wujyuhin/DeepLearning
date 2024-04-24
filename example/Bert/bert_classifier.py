@@ -14,6 +14,7 @@ from transformers import BertModel, BertTokenizer
 
 if __name__ == '__main__':
     # 定义路径
+    data_path = '../../data/ChineseNlpCorpus/_processed.csv'
     data_path = '../data/ChineseNlpCorpus_processed.csv'
     stopwords_path = '../data/stopwords.txt'
     model_path = '../word2vec/word2vec.pkl'
@@ -32,7 +33,7 @@ if __name__ == '__main__':
     tokenizer = BertTokenizer.from_pretrained(model_name) # 加载分词器
     model = BertModel.from_pretrained(model_name)  # 加载模型
 
-    tokenizer.batch_encode_plus(X_train, max_length=512, padding='max_length', truncation=True, return_tensors='pt')
+    a = tokenizer.batch_encode_plus(X_train, max_length=512, padding='max_length', truncation=True, return_tensors='pt')
 
     # 因为bert找不到对应的词向量，所以还是使用单字的词向量
     # X_train_data = []

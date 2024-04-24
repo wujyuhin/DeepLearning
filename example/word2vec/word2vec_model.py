@@ -7,10 +7,7 @@ import pandas as pd
 import jieba
 import re
 from gensim.models import Word2Vec
-<<<<<<< HEAD
-=======
 from tqdm import tqdm
->>>>>>> dad1c1502c4a8901b4ffa4702e0e6a35af4993da
 from torch.utils.data import Dataset
 import torch
 
@@ -62,14 +59,11 @@ class HotelDataset(Dataset):
 
 
 class collate:
-<<<<<<< HEAD
     """
     定义自己的 collate_fn 方法, 用于处理变长数据.
     :param data_tuple: data_tuple是一个列表，列表中包含 batch_size 个元组，每个元组中包含数据和标签
     :return: 返回处理后的数据
     """
-=======
->>>>>>> dad1c1502c4a8901b4ffa4702e0e6a35af4993da
     def __init__(self, model, device):
         self.model = model
         self.device = device
