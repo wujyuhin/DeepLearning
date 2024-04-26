@@ -1,7 +1,9 @@
+from typing import Any
+
 import torch.nn as nn
 import torch
 import pytorch_lightning as pl
-
+from pytorch_lightning.utilities.types import STEP_OUTPUT
 
 
 class ELMOClassificationModel(pl.LightningModule):
@@ -57,13 +59,6 @@ class ELMOClassificationModel(pl.LightningModule):
         return predict_text
 
 
-    # def default_hidden(self):
-    #     """
-    #     设置默认的隐藏层.
-    #     :return:
-    #     """
-    #     return torch.randn(2, self.batch_size, self.hidden_size)
-
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=0.001)
 
@@ -71,6 +66,26 @@ class ELMOClassificationModel(pl.LightningModule):
         x, y = batch
         y_hat = self(x)
         loss = self.loss(y_hat, y)
-        return {'loss': loss}
+        self.log('train_loss',loss,prog_bar=True)
+        self.log('train_accuracy',self.accuracy(y_hat,y),prog_bar=True)
+        return {'loss': loss, 'accuracy': self.accuracy(y_hat, y)}
 
+    def accuracy(self, y_hat, y):
+        return torch.sum(torch.argmax(y_hat, dim=1) == y).item() / len(y)
+
+    def validation_step(self, batch, batch_idx):
+        x, y = batch
+        y_hat = self(x)
+        loss = self.loss(y_hat, y)
+        self.log('val_loss', loss,prog_bar=True)
+        self.log('val_accuracy', self.accuracy(y_hat, y),prog_bar=True)
+        return {'loss': loss, 'accuracy': self.accuracy(y_hat, y)}
+
+    def test_step(self, batch, batch_idx):
+        x, y = batch
+        y_hat = self(x)
+        loss = self.loss(y_hat, y)
+        self.log('test_loss', loss,prog_bar=True)
+        self.log('test_accuracy', self.accuracy(y_hat, y),prog_bar=True)
+        return {'loss': loss, 'accuracy': self.accuracy(y_hat, y)}
 

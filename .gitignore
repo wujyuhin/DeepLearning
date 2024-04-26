@@ -1,0 +1,3 @@
+example/Bert/bert-base-uncased
+example/Bert/lightning_logs
+example/LSTM/lightning_logs

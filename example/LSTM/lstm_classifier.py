@@ -5,6 +5,7 @@ from sklearn.model_selection import train_test_split
 from gensim.models import Word2Vec
 from torch.utils.data import DataLoader, Dataset
 import pytorch_lightning as pl
+from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from model.ELMO import ELMOClassificationModel
 import torch.nn.utils.rnn as rnn_utils
 import torch
@@ -45,6 +46,18 @@ def collate(data_tuple):
     data = rnn_utils.pad_sequence(data, batch_first=True)
     return data.transpose(0, 1), torch.tensor(label)
 
+def w2v(X):
+    X_test_data = []
+    for item in X:
+        sentences = []
+        for i in item:
+            try:
+                sentences.append(word2vec.wv[i])
+            except:
+                pass
+        X_test_data.append(torch.tensor(np.array(sentences)))
+    return X_test_data
+
 
 if __name__ == '__main__':
     # 定义路径
@@ -60,25 +73,42 @@ if __name__ == '__main__':
     X = data['review']  # 形如：pd.DataFrame(['我 是 一个 好人', '你 是 一个 坏人'])
     y = data['label']  # 形如：pd.DataFrame([1,0])
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    X_train, X_dev, y_train, y_dev = train_test_split(X_train, y_train, test_size=0.2, random_state=42)
+    # X_train, X_dev, y_train, y_dev = train_test_split(X_train, y_train, test_size=0.2, random_state=42)
     X_train.reset_index(drop=True, inplace=True)
     y_train.reset_index(drop=True, inplace=True)
+    # y_train.reset_index(drop=True, inplace=True)
+    # X_dev.reset_index(drop=True, inplace=True)
+    # y_dev.reset_index(drop=True, inplace=True)
+    # X_test.reset_index(drop=True, inplace=True)
+    # y_test.reset_index(drop=True, inplace=True)
     # ========== 将每一句话每个词转换成tensor vector ==========
     word2vec = Word2Vec.load(model_path)
-    X_train_data = []  # shape: (batch_size, seq_len, hidden_size)
-    for item in X_train:  # item: (['我', '是', '一个', '好人'], 1)
-        sentences = []
-        for i in item:  # i: '我'
-            try:
-                sentences.append(word2vec.wv[i])  # shape: sentences = [(hidden_size,), (hidden_size,), ...]
-            except:
-                pass
-        X_train_data.append(torch.tensor(np.array(sentences)))  # shape: X_train_data = [(seq_len, hidden_size), ...]
+    # X_train_data = []  # shape: (batch_size, seq_len, hidden_size)
+    # for item in X_train:  # item: (['我', '是', '一个', '好人'], 1)
+    #     sentences = []
+    #     for i in item:  # i: '我'
+    #         try:
+    #             sentences.append(word2vec.wv[i])  # shape: sentences = [(hidden_size,), (hidden_size,), ...]
+    #         except:
+    #             pass
+    #     X_train_data.append(torch.tensor(np.array(sentences)))  # shape: X_train_data = [(seq_len, hidden_size), ...]
+
+    X_train_data = w2v(X_train)
+    # X_dev_data = w2v(X_dev)
+    X_test_data = w2v(X_test)
 
     train_data = HotelDataset(X_train_data, y_train)
-    train_loader = DataLoader(train_data, batch_size=64, shuffle=True, drop_last=True, collate_fn=collate)
-
+    train_data,valid_data = torch.utils.data.random_split(train_data, [int(len(train_data) * 0.8), len(train_data) - int(len(train_data) * 0.8)])
+    train_loader = DataLoader(train_data, batch_size=64, collate_fn=collate)
+    valid_loader = DataLoader(valid_data, batch_size=64,collate_fn=collate)
+    # dev_data = HotelDataset(X_dev_data, y_dev)
+    # dev_loader = DataLoader(dev_data, batch_size=2000, shuffle=True, drop_last=True, collate_fn=collate)
+    test_data = HotelDataset(X_test_data, y_test)
+    test_loader = DataLoader(test_data, batch_size=64, shuffle=True, drop_last=True, collate_fn=collate)
     # ================================= python-lightning =================================================
     model = ELMOClassificationModel(input_size=128, hidden_size=64, batch_size=64, output_size=2)
     trainer = pl.Trainer(max_epochs=100)
-    trainer.fit(model, train_loader)
+    # trainer = pl.Trainer(max_epochs=100,callbacks=[EarlyStopping(monitor='val_loss', mode='min', patience=5)])
+    trainer.fit(model,train_loader,valid_loader)
+    # trainer.fit(model, train_dataloaders=train_loader, val_dataloaders=dev_loader)
+    # trainer.test(model, test_dataloaders=dev_loader)
