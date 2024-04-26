@@ -10,7 +10,17 @@ from model.ELMO import ELMOClassificationModel
 import torch.nn.utils.rnn as rnn_utils
 import torch
 from torch.utils.data import Dataset
+from pytorch_lightning.callbacks import TQDMProgressBar
+import sys
 
+class LitProgressBar(TQDMProgressBar):
+    """ 自定义进度条 : 使得验证集的进度条不显示"""
+    def init_validation_tqdm(self):
+        bar = super().init_validation_tqdm()
+        # bar.set_description("running validation...")
+        if not sys.stdout.isatty():
+            bar.disable = True
+        return bar
 
 class HotelDataset(Dataset):
     def __init__(self, x_train, y_train):
@@ -107,7 +117,7 @@ if __name__ == '__main__':
     test_loader = DataLoader(test_data, batch_size=64, shuffle=True, drop_last=True, collate_fn=collate)
     # ================================= python-lightning =================================================
     model = ELMOClassificationModel(input_size=128, hidden_size=64, batch_size=64, output_size=2)
-    trainer = pl.Trainer(max_epochs=100)
+    trainer = pl.Trainer(max_epochs=100,callbacks=[LitProgressBar()])
     # trainer = pl.Trainer(max_epochs=100,callbacks=[EarlyStopping(monitor='val_loss', mode='min', patience=5)])
     trainer.fit(model,train_loader,valid_loader)
     # trainer.fit(model, train_dataloaders=train_loader, val_dataloaders=dev_loader)
