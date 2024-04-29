@@ -17,6 +17,7 @@ class ELMOClassificationModel(pl.LightningModule):
         super(ELMOClassificationModel, self).__init__()
         self.hidden_size = hidden_size
         self.batch_size = batch_size
+        self.validation_step_outputs = []
 
         # 定义双向 GRU.
         self.GRU = nn.GRU(input_size=input_size, hidden_size=hidden_size, bidirectional=True)
@@ -71,15 +72,31 @@ class ELMOClassificationModel(pl.LightningModule):
         return {'loss': loss, 'accuracy': self.accuracy(y_hat, y)}
 
     def accuracy(self, y_hat, y):
-        return torch.sum(torch.argmax(y_hat, dim=1) == y).item() / len(y)
+        return torch.sum(torch.argmax(y_hat, dim=1) == y).item() / torch.tensor(len(y))
 
     def validation_step(self, batch, batch_idx):
+        # x, y = batch
+        # y_hat = self(x)
+        # loss = self.loss(y_hat, y)
+        # accuracy = self.accuracy(y_hat, y)
+        loss, accuracy = self._shared_eval_step(batch, batch_idx)
+        self.validation_step_outputs.append({'loss': loss, 'accuracy': accuracy})
+        # result = {'loss': loss, 'accuracy': accuracy}
+        # self.log('val_loss', loss)
+        # self.log('val_accuracy', accuracy)
+        # return {'loss': loss, 'accuracy': accuracy}
+
+    def on_validation_epoch_end(self):
+        val_loss = torch.stack([x['loss'] for x in self.validation_step_outputs]).mean()
+        val_accuracy = torch.stack([x['accuracy'] for x in self.validation_step_outputs]).mean()
+        self.log('avg_val_loss', val_loss)
+        self.log('avg_val_accuracy', val_accuracy)
+    #
+    def _shared_eval_step(self, batch: Any, batch_idx: int) :
         x, y = batch
         y_hat = self(x)
         loss = self.loss(y_hat, y)
-        self.log('val_loss', loss,prog_bar=True)
-        self.log('val_accuracy', self.accuracy(y_hat, y),prog_bar=True)
-        return {'loss': loss, 'accuracy': self.accuracy(y_hat, y)}
+        return loss, self.accuracy(y_hat, y)
 
     def test_step(self, batch, batch_idx):
         x, y = batch

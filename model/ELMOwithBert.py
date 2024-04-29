@@ -19,16 +19,16 @@ class ELMOClassificationModelwithBert(pl.LightningModule):
         self.hidden_size = hidden_size
         self.batch_size = batch_size
         self.bert_model = bert_model
+        self.validation_step_outputs = []
 
         # 定义双向 GRU.
-        self.GRU = nn.GRU(input_size=input_size, hidden_size=hidden_size, bidirectional=True)
+        self.GRU = nn.GRU(input_size=bert_model.pooler.dense.out_features, hidden_size=hidden_size, bidirectional=True)
 
         # 定义多层感知机 MLP.
-        self.BertLinear = nn.Linear(in_features=768, out_features=self.input_size)
+        self.BertLinear = nn.Linear(in_features=self.bert_model.pooler.dense.out_features, out_features=self.input_size)
         self.Linear = nn.Linear(in_features=hidden_size * 2, out_features=hidden_size)
         self.ReLU = nn.ReLU()
         self.Predict = nn.Linear(in_features=hidden_size, out_features=output_size)
-
         # 将预测值经过 Softmax 转化为概率.
         self.Softmax = nn.Softmax(dim=1)
         self.loss = nn.CrossEntropyLoss()
@@ -50,36 +50,37 @@ class ELMOClassificationModelwithBert(pl.LightningModule):
         return predict_text
 
     def configure_optimizers(self):
-        return torch.optim.Adam(filter(lambda p:p.requires_grad,self.parameters()), lr=0.01)
+        return torch.optim.Adam(filter(lambda p:p.requires_grad,self.parameters()), lr=0.001)
+
 
     def training_step(self, batch, batch_idx):
-        # 方便为了dataloader时不使用collet_fn
-        # try:
-        #     input_ids, token_type_ids, attention_mask, y = batch
-        # except:
-        #     X,y = batch
-        #     input_ids,token_type_ids,attention_mask = X[0],X[1],X[2]
         input_ids, token_type_ids, attention_mask, y = batch
         y_hat = self(input_ids, token_type_ids, attention_mask)
         loss = self.loss(y_hat, y)
         self.log('train_loss',loss,prog_bar=True)
         self.log('train_accuracy',self.accuracy(y_hat,y),prog_bar=True)
-        return {'loss': loss, 'accuracy': self.accuracy(y_hat, y)}
+        return loss
+        # return {'loss': loss, 'accuracy': self.accuracy(y_hat, y)}
+
+    def validation_step(self, batch, batch_idx):
+        input_ids, token_type_ids, attention_mask, y = batch
+        y_hat = self(input_ids, token_type_ids, attention_mask)
+        result = {'loss': self.loss(y_hat, y), 'accuracy': self.accuracy(y_hat, y)}
+        self.validation_step_outputs.append(result)
+        return result
+
+    def on_validation_epoch_end(self):
+        avg_loss = torch.tensor([x['loss'] for x in self.validation_step_outputs]).mean()
+        avg_accuracy = torch.tensor([x['accuracy'] for x in self.validation_step_outputs]).mean()
+        self.log('avg_val_loss', avg_loss, prog_bar=True)
+        self.log('avg_val_acc', avg_accuracy, prog_bar=True)
 
     def test_step(self, batch, batch_idx):
         input_ids, token_type_ids, attention_mask, y = batch
         y_hat = self(input_ids, token_type_ids, attention_mask)
         loss = self.loss(y_hat, y)
         self.log('test_loss', loss,prog_bar=True)
-        self.log('train_accuracy', self.accuracy(y_hat, y),prog_bar=True)
-        return {'loss': loss, 'accuracy': self.accuracy(y_hat, y)}
-
-    def validation_step(self, batch, batch_idx):
-        input_ids, token_type_ids, attention_mask, y = batch
-        y_hat = self(input_ids, token_type_ids, attention_mask)
-        loss = self.loss(y_hat, y)
-        self.log('val_loss', loss,prog_bar=True)
-        self.log('val_accuracy', self.accuracy(y_hat, y),prog_bar=True)
+        self.log('test_accuracy', self.accuracy(y_hat, y),prog_bar=True)
         return {'loss': loss, 'accuracy': self.accuracy(y_hat, y)}
 
     def accuracy(self, y_hat, y):

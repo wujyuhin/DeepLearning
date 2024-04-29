@@ -1,3 +1,4 @@
+import selenium.webdriver.firefox.remote_connection
 import torch
 import torch.nn as nn
 import pytorch_lightning as pl
@@ -20,11 +21,22 @@ class ANNwithBert(pl.LightningModule):
         self.validation_step_outputs = []
         # 网络
         self.bert_fc = nn.Linear(bert_model.pooler.dense.out_features, input_dim)
-        self.fc1 = nn.Linear(input_dim, 128)
+        self.fc1 = nn.Linear(input_dim, 512)
         self.relu1 = nn.ReLU()
-        self.fc2 = nn.Linear(128, output_dim)
+        self.fc2 = nn.Linear(512, 256)
+        self.relu2 = nn.ReLU()
+        self.fc3 = nn.Linear(256, 128)
+        self.relu3 = nn.ReLU()
+        self.fc4 = nn.Linear(128, 64)
+        self.relu4 = nn.ReLU()
+        self.fcn = nn.Linear(64, output_dim)
 
-        self.dropout = nn.Dropout(0.2)
+        self.dropout1 = nn.Dropout(0.2)
+        self.dropout2 = nn.Dropout(0.2)
+        self.dropout3 = nn.Dropout(0.2)
+        self.dropout4 = nn.Dropout(0.2)
+        self.dropout5 = nn.Dropout(0.2)
+
         # softmax
         self.softmax = nn.Softmax(dim=1)
         self.loss = nn.CrossEntropyLoss()
@@ -34,17 +46,18 @@ class ANNwithBert(pl.LightningModule):
             out = self.bert_model(input_ids=input_ids,
                                   token_type_ids=token_type_ids,
                                   attention_mask=attention_mask)
-        # if self.input_dim == out.last_hidden_state.shape[2]:
-        #     x = out.last_hidden_state[:, 0, :]  # bert-base-uncased :[batch_size, seq_length, 768]
-        # else:
-        #     x = self.bert_fc(out.last_hidden_state[:, 0, :])
         x = self.bert_fc(out.last_hidden_state[:, 0, :])
-        x = self.dropout(x)
-        x = self.fc1(x)
-        x = self.relu1(x)
-        x = self.fc2(x)
+        x = self.dropout1(x)
+        x = self.relu1(self.fc1(x))
+        x = self.dropout2(x)
+        x = self.relu2(self.fc2(x))
+        x = self.dropout3(x)
+        x = self.relu3(self.fc3(x))
+        x = self.dropout4(x)
+        x = self.relu4(self.fc4(x))
+        x = self.dropout5(x)
         # 分类
-        x = self.softmax(x)
+        x = self.softmax(self.fcn(x))
         return x
 
 

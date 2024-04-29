@@ -5,6 +5,7 @@ from sklearn.model_selection import train_test_split
 from gensim.models import Word2Vec
 from torch.utils.data import DataLoader, Dataset
 import pytorch_lightning as pl
+from pytorch_lightning.callbacks import TQDMProgressBar, EarlyStopping
 from model.ELMO import ELMOClassificationModel
 import torch.nn.utils.rnn as rnn_utils
 import torch
@@ -13,6 +14,19 @@ from transformers import BertModel, BertTokenizer
 from model.ELMOwithBert import ELMOClassificationModelwithBert
 from model.metric import PrintAccuracyAndLossCallback
 from model.ANNwithBert import ANNwithBert
+import sys
+
+class LitProgressBar(TQDMProgressBar):
+    """ 自定义进度条 : 使得验证集的进度条不显示"""
+    def init_validation_tqdm(self):
+        bar = super().init_validation_tqdm()
+        # bar.set_description("running validation...")
+        if not sys.stdout.isatty():
+            bar.disable = True
+        return bar
+
+
+
 
 class HotelDataset(Dataset):
     """
@@ -41,7 +55,7 @@ def collator_fn(data):
                                        add_special_tokens=True,  # add_special_tokens 会给输入加上[cls], [sep] 等特殊token
                                        padding="max_length",
                                        return_tensors='pt',
-                                       max_length=256,
+                                       max_length=512,
                                        truncation=True)  # 512 是默认值
     input_ids = data['input_ids']
     token_type_ids = data['token_type_ids']
@@ -57,8 +71,9 @@ if __name__ == '__main__':
     # 数据导入
     data = pd.read_csv(data_path)
     # bert模型导入和配置
-    model_name = 'bert-base-uncased'
+    # model_name = 'bert-base-uncased'
     # model_name = 'uerchinese_roberta_L-2_H-128'
+    model_name = 'bert-base-chinese'
     tokenizer = BertTokenizer.from_pretrained(model_name)  # 加载分词器
     pre_trained = BertModel.from_pretrained(model_name)  # 加载模型
     for parameter in pre_trained.parameters():  # 冻结bert模型参数
@@ -78,17 +93,28 @@ if __name__ == '__main__':
     y_test.reset_index(drop=True, inplace=True)
     # 数据集和数据加载器
     train_data = HotelDataset(X_train, y_train)
-    train_loader = DataLoader(dataset=train_data, batch_size=64, shuffle=True, drop_last=False, collate_fn=collator_fn)
+    train_loader = DataLoader(dataset=train_data, batch_size=128, shuffle=True, drop_last=False, collate_fn=collator_fn)
     dev_data = HotelDataset(X_dev, y_dev)
-    dev_loader = DataLoader(dataset=dev_data, batch_size=2000, shuffle=True, drop_last=False, collate_fn=collator_fn)
+    dev_loader = DataLoader(dataset=dev_data, batch_size=128, shuffle=True, drop_last=False, collate_fn=collator_fn)
     test_data = HotelDataset(X_test, y_test)
-    test_loader = DataLoader(dataset=test_data, batch_size=64, shuffle=False, drop_last=False, collate_fn=collator_fn)
+    test_loader = DataLoader(dataset=test_data, batch_size=128, shuffle=False, drop_last=False, collate_fn=collator_fn)
 
     #  =====================================  模型训练 pytorch_lightning  ============================================
     # model = ELMOClassificationModelwithBert(input_size=768, hidden_size=64, batch_size=64, output_size=2,
     #                                         bert_model=pre_trained)
-    model = ANNwithBert(input_dim=128, output_dim=2, bert_model=pre_trained)
-    trainer = pl.Trainer(max_epochs=500)
+    # 设置lightning早停
+    early_stop_callback = EarlyStopping(
+        monitor='avg_val_loss',
+        min_delta=0.00,
+        patience=3,
+        verbose=False,
+        mode='min'
+    )
+    inputdim = pre_trained.pooler.dense.out_features
+    model = ANNwithBert(input_dim=inputdim, output_dim=2, bert_model=pre_trained)
+    # model = ELMOClassificationModelwithBert(input_size=inputdim, hidden_size=64, batch_size=64,
+    #                                         output_size=2,bert_model=pre_trained)
+    trainer = pl.Trainer(max_epochs=100, callbacks=[LitProgressBar(), early_stop_callback])
     trainer.fit(model, train_loader, dev_loader)
     trainer.test(model, test_loader)
 
